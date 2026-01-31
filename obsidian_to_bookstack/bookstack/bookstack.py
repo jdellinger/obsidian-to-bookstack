@@ -284,6 +284,7 @@ class Bookstack(LocalClient):
         self.client._refresh()  # refresh to update book and page ids
         self.chapter_collector.create_remote_missing_chapters()
         self.page_collector.create_remote_missing_pages()
+        self.client._refresh()  # refresh to include newly created pages and chapters
 
     def sync_local(self):
         """Sync any remote changes to local store"""
