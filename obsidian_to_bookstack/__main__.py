@@ -59,6 +59,36 @@ def local(ctx):
         b.sync_local()
 
 
+@cli.command(help="Pull all changes from remote (new files and updates).")
+@click.pass_context
+def pull(ctx):
+    """Combines 'local' and 'update --local' for a full download sync."""
+    b = ctx.obj.get("bookstack")
+
+    console.log("Step 1: Downloading any missing files from remote...")
+    with console.status("Downloading..."):
+        b.sync_local()
+
+    console.log("Step 2: Updating existing local files from remote...")
+    with console.status("Updating..."):
+        b.update_remote(remote=False, local=True)
+
+
+@cli.command(help="Push all changes to remote (new files and updates).")
+@click.pass_context
+def push(ctx):
+    """Combines 'remote' and 'update --remote' for a full upload sync."""
+    b = ctx.obj.get("bookstack")
+
+    console.log("Step 1: Uploading any missing files to remote...")
+    with console.status("Uploading..."):
+        b.sync_remote()
+
+    console.log("Step 2: Updating existing remote files from local changes...")
+    with console.status("Updating..."):
+        b.update_remote(remote=True, local=False)
+
+
 @cli.command(help="Update files in Bookstack or Obsidian")
 @click.pass_context
 @click.option(

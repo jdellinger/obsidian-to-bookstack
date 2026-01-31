@@ -93,6 +93,14 @@ Pushes up any missing files in the remote
 Requires either the `--remote` or the `--local` flag.
 If `--remote` is specified, any files which have been updated locally will be changed in the remote and vice-versa for `--local`.
 
+### Push
+
+Pushes up any missing remote files and updates any files remotely that have been updated in local.
+
+### Pull
+
+Pulls down any missing local files and updates any files locally that have been updated in the remote.
+
 ### Delete
 
 Requires one of `--shelf`, `--book`, `--page`. Will delete Obsidian files and Bookstack files at the same time. Anything nested under a shelf or book will also be deleted.
