@@ -169,105 +169,83 @@ class Bookstack(LocalClient):
 
         self.__set_artifacts()
 
-    def delete(self, arg: BookstackItems, item: str):
+    def _build_object_for_delete(self, item_type: BookstackItems, path_parts: list):
+        """Builds the correct artifact object from path parts for deletion lookup."""
+        if item_type == BookstackItems.SHELF:
+            return Shelf(name=path_parts[0])
+        elif item_type == BookstackItems.BOOK:
+            shelf = Shelf(name=path_parts[0])
+            return Book(name=path_parts[1], shelf=shelf)
+        elif item_type == BookstackItems.CHAPTER:
+            shelf = Shelf(name=path_parts[0])
+            book = Book(name=path_parts[1], shelf=shelf)
+            return Chapter(name=path_parts[2], book=book)
+        elif item_type == BookstackItems.PAGE:
+            shelf = Shelf(name=path_parts[0])
+            book = Book(name=path_parts[1], shelf=shelf)
+            # Handle pages in chapters vs. pages in books
+            if len(path_parts) == 4:
+                chapter = Chapter(name=path_parts[2], book=book)
+                return Page(name=path_parts[3], book=book, chapter=chapter)
+            else:
+                return Page(name=path_parts[2], book=book)
+        return None
+
+    def delete(self, item_type: BookstackItems, item_path_str: str):
         """Delete item from both local Obsidian Vault and remote Bookstack instance"""
-        item_sections = item.split(os.path.sep)
-        len_item_sections = len(item_sections)
+        path_parts = item_path_str.split(os.path.sep)
 
-        if arg == BookstackItems.SHELF:
-            assert len_item_sections == 1
-            path = os.path.join(self.path, item)
-            if self.verbose:
-                console.log(f"Deleting path: {path}")
-
-            shutil.rmtree(path)
-            shelf = Shelf(item)
-
-            client_shelf = self.client._retrieve_from_client_map(shelf)
-
-            class ShelfLink(DetailedBookstackLink):
-                LINK = f"/api/shelves/{client_shelf.details['id']}"
-
-            if self.verbose:
-                console.log(f"Deleting shelf in Bookstack: {client_shelf}")
-
-            self._delete_from_bookstack(ShelfLink.LINK)
-
-            for book in client_shelf.books:
-
-                class ShelfBookLink(DetailedBookstackLink):
-                    LINK = f"/api/books/{book.details['id']}"
-
+        # 1. Delete local file/directory
+        local_path = os.path.join(self.path, *path_parts)
+        if item_type == BookstackItems.PAGE:
+            # Append .md for pages and remove file
+            local_path += ".md"
+            if os.path.exists(local_path):
                 if self.verbose:
-                    console.log(f"Deleting book in Bookstack: {book}")
+                    console.log(f"Deleting local file: {local_path}")
+                os.remove(local_path)
+        else:
+            # Remove directory for shelves, books, chapters
+            if os.path.isdir(local_path):
+                if self.verbose:
+                    console.log(f"Deleting local directory: {local_path}")
+                shutil.rmtree(local_path)
 
-                self._delete_from_bookstack(ShelfBookLink.LINK)
+        # 2. Build a temporary object to find the remote equivalent
+        lookup_obj = self._build_object_for_delete(item_type, path_parts)
+        if not lookup_obj:
+            console.log(f"[bold red]Error:[/bold red] Could not build object for path '{item_path_str}'")
+            return
 
-        if arg == BookstackItems.BOOK:
-            assert len_item_sections == 2
-            path = os.path.join(self.path, item_sections[0], item_sections[1])
-            if self.verbose:
-                console.log(f"Deleting path at: {path}")
-
-            shutil.rmtree(path)
-
-            shelf = Shelf(item_sections[0])
-            book = Book(item_sections[1], shelf=shelf)
-
-            client_book = self.client._retrieve_from_client_map(book)
-
-            class BookLink(DetailedBookstackLink):
-                LINK = f"/api/books/{client_book.details['id']}"
-
-            if self.verbose:
-                console.log(f"Deleting book in Bookstack: {client_book}")
-
-            self._delete_from_bookstack(BookLink.LINK)
-
-        if arg == BookstackItems.PAGE:
-            assert len_item_sections == 3
-            path = os.path.join(
-                self.path, item_sections[0], item_sections[1], item_sections[2] + ".md"
+        try:
+            client_obj = self.client._retrieve_from_client_map(lookup_obj)
+        except KeyError:
+            console.log(
+                f"[bold yellow]Warning:[/bold yellow] Could not find remote equivalent for '{item_path_str}'. It may have already been deleted."
             )
-            if self.verbose:
-                console.log(f"Deleting path at: {path}")
+            return
 
-            os.remove(path)
-            book = Book(item_sections[1])
-            page = Page(item_sections[2], book=book)
-            client_page = self.client._retrieve_from_client_map(page)
+        # 3. Construct the correct API endpoint and delete the remote object
+        endpoint_map = {
+            BookstackItems.SHELF: BookstackAPIEndpoints.SHELVES,
+            BookstackItems.BOOK: BookstackAPIEndpoints.BOOKS,
+            BookstackItems.CHAPTER: BookstackAPIEndpoints.CHAPTERS,
+            BookstackItems.PAGE: BookstackAPIEndpoints.PAGES,
+        }
 
-            class PageLink(DetailedBookstackLink):
-                LINK = f"/api/pages/{client_page.details['id']}"
+        endpoint = endpoint_map.get(item_type)
+        if not endpoint:
+            return
 
-            if self.verbose:
-                console.log(f"Deleting page in Bookstack: {client_page}")
+        class DeletionLink(DetailedBookstackLink):
+            LINK = f"{endpoint.value}/{client_obj.details['id']}"
 
-            self._delete_from_bookstack(PageLink.LINK)
-
-        if arg == BookstackItems.CHAPTER:
-            assert len_item_sections == 3
-            path = os.path.join(
-                self.path, item_sections[0], item_sections[1], item_sections[2]
+        if self.verbose:
+            console.log(
+                f"Deleting remote {item_type.value}: {client_obj} (id: {client_obj.details['id']})"
             )
-            if self.verbose:
-                console.log(f"Deleting path at: {path}")
 
-            shutil.rmtree(path)
-
-            shelf = Shelf(item_sections[0])
-            book = Book(item_sections[1], shelf=shelf)
-            chapter = Chapter(item_sections[2], book=book)
-
-            client_chapter = self.client._retrieve_from_client_map(chapter)
-
-            class ChapterLink(DetailedBookstackLink):
-                LINK = f"/api/books/{client_chapter.details['id']}"
-
-            if self.verbose:
-                console.log(f"Deleting chapter in Bookstack: {client_chapter}")
-
-            self._delete_from_bookstack(ChapterLink.LINK)
+        self._delete_from_bookstack(DeletionLink.LINK)
 
     def _delete_from_bookstack(self, link: DetailedBookstackLink):
         """Make a DELETE request to a Bookstack API link"""

@@ -119,12 +119,12 @@ def update(ctx, remote, local):
 
 @cli.command(help="Delete Bookstack and Obsidian object")
 @click.pass_context
-@click.argument("path", required=True)
 @click.option("--shelf", is_flag=True, help="Delete a shelf")
 @click.option("--book", is_flag=True, help="Delete a book")
 @click.option("--chapter", is_flag=True, help="Delete a chapter")
 @click.option("--page", is_flag=True, help="Delete a page")
-def delete(ctx, path, shelf, book, chapter, page):
+@click.argument("path", required=True)
+def delete(ctx, shelf, book, chapter, page, path):
     b = ctx.obj.get("bookstack")
     if not any([shelf, book, chapter, page]):
         raise click.UsageError(

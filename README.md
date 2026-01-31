@@ -103,7 +103,7 @@ Pulls down any missing local files and updates any files locally that have been 
 
 ### Delete
 
-Requires one of `--shelf`, `--book`, `--page`. Will delete Obsidian files and Bookstack files at the same time. Anything nested under a shelf or book will also be deleted.
+Requires one of `--shelf`, `--book`, `--chapter`, or `--page`. Will delete Obsidian files and Bookstack files at the same time. Anything nested under a shelf, book, or chapter will also be deleted.
 Must be called in a path like structure. Ex:
 
 ```bash
@@ -114,7 +114,7 @@ Must be called in a path like structure. Ex:
     - Page.md
 ```
 
-The command would be called as `obsidian_to_bookstack delete Shelf/Book/Page --page` to delete a page.
+The command would be called as `obsidian_to_bookstack delete --page Shelf/Book/Page` to delete a page.
 
 Optional configuration commands must be ran as:
 
