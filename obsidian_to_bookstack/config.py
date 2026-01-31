@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import toml
 from dotenv import load_dotenv
@@ -33,9 +34,8 @@ def load_toml(conf_path: str):
             conf_path = conf
             dbf.update_config(conf_path)
         else:
-            USER = os.environ["USER"]
-            path = f"/home/{USER}/.config/obsidian_to_bookstack"
-            conf_path = os.path.join(path, "conf.toml")
+            # Default to the standard config location within the user's home directory
+            conf_path = Path.home() / ".config" / "obsidian_to_bookstack" / "conf.toml"
             dbf.update_config(conf_path)
 
     try:

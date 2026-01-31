@@ -1,17 +1,19 @@
 import os
 import sqlite3
+from pathlib import Path
 
-DATA_PATH = f"/home/{os.environ.get('USER')}/.config/obsidian_to_bookstack/data"
+
+DATA_PATH = Path.home() / ".config" / "obsidian_to_bookstack" / "data"
 
 def connect():
-    conn = sqlite3.connect(f"{DATA_PATH}/settings.db")
+    conn = sqlite3.connect(DATA_PATH / "settings.db")
     cursor = conn.cursor()
     return conn, cursor
 
 
 def make_data_folder():
     if not os.path.exists(DATA_PATH):
-        os.mkdir(DATA_PATH)
+        os.makedirs(DATA_PATH, exist_ok=True)
 
 
 def create_settings_if_not_exists():
