@@ -271,6 +271,73 @@ class Bookstack(LocalClient):
         self.chapter_collector.create_local_missing_chapters()
         self.page_collector.create_local_missing_pages()
 
+    def purge_local(self):
+        """Deletes local files that do not exist on the remote."""
+        if self.verbose:
+            console.log("Purging local files not found on remote...")
+
+        # The order is important: from most nested to least (pages -> chapters -> books -> shelves)
+
+        # Purge pages
+        extra_pages = self.page_collector._get_missing_set(
+            BookstackItems.PAGE, SyncType.REMOTE
+        )
+        for page in extra_pages:
+            if os.path.exists(page.path):
+                if self.verbose:
+                    console.log(f"Purging local page: {page.path}")
+                os.remove(page.path)
+
+        # Purge chapters
+        extra_chapters = self.chapter_collector._get_missing_set(
+            BookstackItems.CHAPTER, SyncType.REMOTE
+        )
+        for chapter in extra_chapters:
+            if os.path.isdir(chapter.path):
+                if self.verbose:
+                    console.log(f"Purging local chapter: {chapter.path}")
+                shutil.rmtree(chapter.path)
+
+        # Purge books
+        extra_books = self.book_collector._get_missing_set(
+            BookstackItems.BOOK, SyncType.REMOTE
+        )
+        for book in extra_books:
+            if os.path.isdir(book.path):
+                if self.verbose:
+                    console.log(f"Purging local book: {book.path}")
+                shutil.rmtree(book.path)
+
+        # Purge shelves
+        extra_shelves = self.shelf_collector._get_missing_set(
+            BookstackItems.SHELF, SyncType.REMOTE
+        )
+        for shelf in extra_shelves:
+            if os.path.isdir(shelf.path):
+                if self.verbose:
+                    console.log(f"Purging local shelf: {shelf.path}")
+                shutil.rmtree(shelf.path)
+
+    def purge_remote(self):
+        """Deletes remote items that do not exist locally."""
+        if self.verbose:
+            console.log("Purging remote items not found locally...")
+
+        # The order is important: from most nested to least (pages -> chapters -> books -> shelves)
+
+        for item_type in [
+            BookstackItems.PAGE,
+            BookstackItems.CHAPTER,
+            BookstackItems.BOOK,
+            BookstackItems.SHELF,
+        ]:
+            collector = getattr(self, f"{item_type.value}_collector")
+            extra_items = collector._get_missing_set(item_type, SyncType.LOCAL)
+            for item in extra_items:
+                if self.verbose:
+                    console.log(f"Purging remote {item_type.value}: {item.get_full_path_str()}")
+                self.delete(item_type, item.get_full_path_str())
+
     def update_remote(self, remote: bool, local: bool):
         """Sync page contents to the remote"""
         updated_pages = []

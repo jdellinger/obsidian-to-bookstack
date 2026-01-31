@@ -43,6 +43,9 @@ class Shelf:
 
         return books
 
+    def get_full_path_str(self) -> str:
+        return self.name
+
 
 class Book:
     def __init__(
@@ -101,6 +104,11 @@ class Book:
         self.pages = pages
         self.chapters = chapters
 
+    def get_full_path_str(self) -> str:
+        if self.shelf:
+            return os.path.join(self.shelf.get_full_path_str(), self.name)
+        return self.name
+
 
 class Chapter:
     def __init__(
@@ -142,6 +150,11 @@ class Chapter:
 
         self.pages = pages
 
+    def get_full_path_str(self) -> str:
+        if self.book:
+            return os.path.join(self.book.get_full_path_str(), self.name)
+        return self.name
+
 
 class Page:
     def __init__(
@@ -169,3 +182,11 @@ class Page:
     def _get_content(self):
         with open(self.path, "r") as f:
             return f.read()
+
+    def get_full_path_str(self) -> str:
+        name = os.path.splitext(self.name)[0]
+        if self.chapter:
+            return os.path.join(self.chapter.get_full_path_str(), name)
+        elif self.book:
+            return os.path.join(self.book.get_full_path_str(), name)
+        return name

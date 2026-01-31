@@ -61,7 +61,10 @@ def local(ctx):
 
 @cli.command(help="Pull all changes from remote (new files and updates).")
 @click.pass_context
-def pull(ctx):
+@click.option(
+    "--purge", is_flag=True, help="Delete local files that are not on remote."
+)
+def pull(ctx, purge):
     """Combines 'local' and 'update --local' for a full download sync."""
     b = ctx.obj.get("bookstack")
 
@@ -73,10 +76,18 @@ def pull(ctx):
     with console.status("Updating..."):
         b.update_remote(remote=False, local=True)
 
+    if purge:
+        console.log("Step 3: Purging local files not found on remote...")
+        with console.status("Purging..."):
+            b.purge_local()
+
 
 @cli.command(help="Push all changes to remote (new files and updates).")
 @click.pass_context
-def push(ctx):
+@click.option(
+    "--purge", is_flag=True, help="Delete remote files that are not in local vault."
+)
+def push(ctx, purge):
     """Combines 'remote' and 'update --remote' for a full upload sync."""
     b = ctx.obj.get("bookstack")
 
@@ -87,6 +98,11 @@ def push(ctx):
     console.log("Step 2: Updating existing remote files from local changes...")
     with console.status("Updating..."):
         b.update_remote(remote=True, local=False)
+
+    if purge:
+        console.log("Step 3: Purging remote files not found in local vault...")
+        with console.status("Purging..."):
+            b.purge_remote()
 
 
 @cli.command(help="Update files in Bookstack or Obsidian")
