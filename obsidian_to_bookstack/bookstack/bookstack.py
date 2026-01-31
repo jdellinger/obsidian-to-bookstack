@@ -347,11 +347,16 @@ class Bookstack(LocalClient):
 
             updated_at = datetime.utcfromtimestamp(file_stat.st_mtime)
 
-            client_page = self.client._retrieve_from_client_map(page)
-
-            client_updated = datetime.strptime(
-                client_page.details["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
+            try:
+                client_page = self.client._retrieve_from_client_map(page)
+                client_updated = datetime.strptime(
+                    client_page.details["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
+            except KeyError:
+                console.log(
+                    f"[bold yellow]Warning:[/bold yellow] Local page '{page.get_full_path_str()}' not found on remote. Skipping update."
+                )
+                continue
 
             if remote:
                 if updated_at > client_updated and (
